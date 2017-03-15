@@ -1,3 +1,4 @@
+from __future__ import unicode_literals
 import opml
 import feedparser
 import youtube_dl
@@ -18,7 +19,7 @@ else:
     content = f.read()
     f.close()
 
-    outline = opml.parse('subs.xml')
+    outline = opml.parse('subscription_manager')
 
     ptime = datetime.utcfromtimestamp(float(content))
     ftime = time()
@@ -28,7 +29,7 @@ else:
     for i in range(0,len(outline[0])):
         urls.append(outline[0][i].xmlUrl)
 
-    videos = []
+    count = 0
     for i in range(0,len(urls)):
         print('Parsing through channel '+str(i+1)+' out of '+str(len(urls)), end='\r')
         feed = feedparser.parse(urls[i])
@@ -36,17 +37,17 @@ else:
             timef = feed['items'][j]['published_parsed']
             dt = datetime.fromtimestamp(mktime(timef))
             if dt > ptime:
-                videos.append(feed['items'][j]['link'])
+                ydl_opts = {
+                    'outtmpl': str(dt) + '--%(uploader)s--%(title)s.%(ext)s'
+                }
+                with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+                    ydl.download([feed['items'][j]['link']])
+                count = count + 1 
 
-    if len(videos) == 0:
-        print('Sorry, no new video found')
+    if count == 0:
+        print('\nSorry, no new video found')
     else:
-        print(str(len(videos))+' new videos found')
-
-    ydl_opts = {}
-
-    with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-        ydl.download(videos)
+        print('\n' + str(count)+' new video(s) found')
 
     f = open('last.txt', 'w')
     f.write(str(ftime))
